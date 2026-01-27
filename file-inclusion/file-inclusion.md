@@ -112,13 +112,15 @@ home
 
 ### Skills Assessment - File Inclusion
 First thing by looking at the pages of the website only Apply seems to be interesting with it i can upload file and if it is not sanitized properly can lead to RCE.
-![[Screenshot_20260127_120815.png]]
+[Skill Assesment](screenshots/Screenshot_20260127_120815.png)
 
 After submitting the form with payload `<?php system($_GET["cmd"]); ?>` was redirected to another page a found possible attack vector `n=value`
-![[Screenshot_20260127_121456.png]]
+[Skill Assesment](screenshots/Screenshot_20260127_121456.png)
 
 Tried different payloads used fuzz for for fuzzing with word lists and did not found something, so i decided to peak in source code of the page and found that images are saved in `/api/image.php?p=value`
-![[Screenshot_20260127_121931.png]]
+
+[Skill Assesment](screenshots/Screenshot_20260127_121931.png)
+
 tried a couple of difference payloads and found that it has none recursive removal which removes `../` to prevent path travel but which is easily bypassed by doubling it `....//`. I was stack on it for a while but but by looking again but now at `apply.php` source code i found that it uses `/api/application.php`, so I will try to read it and possibly find something interesting.
 ```bash
 curl "http://94.237.120.233:53829/api/image.php?p=....//api/application.php"  

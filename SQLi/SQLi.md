@@ -43,7 +43,7 @@ SELECT * FROM database.users;
 - Second thing was that I completely forgot that closing sting could be `')` instead of `'`. 
 - Right after it I made only silly mistakes as typos forgating to add `'` or space after `--` 
 ## SQLi Methodology
-1. Find in `OR` injection on registration page
+1. Find in injection point
 2. Determine column count
 3. Find string columns 
 4. Enumerate database via INFORMATION_SCHEMA

@@ -1,4 +1,3 @@
-
 # SQL Injection Fundamentals
 
 ## What I learned
@@ -40,8 +39,8 @@ SELECT * FROM database.users;
 - Read the file using load file function`LOAD_FILE("path/to/flag.txt")`
 ## Skills Assessment - SQL Injection Fundamentals
 - This assessment was kind of hard for me ass first thing I was tried to do is use SQLi on login page which wasn't vulnerable and I spent a lot of time on it. Eventually looked for the hint and found that register code string is vulnerable so I registered account and logged in.
-- Second thing was that I completely forgot that closing sting could be `')` instead of `'`. 
-- Right after it I made only silly mistakes as typos forgating to add `'` or space after `--` 
+- Second thing was that I completely forgot that closing string could be `')` instead of `'`. 
+- Right after it I made only silly mistakes as typos forgetting to add `'` or space after `--` 
 ## SQLi Methodology
 1. Find in injection point
 2. Determine column count
